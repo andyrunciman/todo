@@ -1,5 +1,6 @@
 var express = require('express');
-var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
+var _ = require('underscore');
 
 var app = express();
 var PORT = process.env.PORT || 3000; //Works for Horoko
@@ -24,68 +25,40 @@ var todos = [{
 
 var todoNextId = 4;
 
-
-
-
-
 app.get('/',function(req,res){
 	res.send('Todo API Root');
 });
 
 //GET /todos
-
 app.get('/todos',function(req,res){
 	res.json(todos);
 });
 
 //GET /todo/:id
 app.get('/todos/:id',function(req,res){
-	
-	// var index = parseInt(req.params.id);
-	// if (Number.isInteger(index) && index >= 0 && index < todos.length){
-	// 	res.json(todos[index]);
-	// }else
-	// {
-	// 	res.send({});
-	// }
-	
 	var index = parseInt(req.params.id);
-	if(Number.isInteger(index)) {
-		for (var i = todos.length - 1; i >= 0; i--) {
-		  if (todos[i].id === index) {
-		  	res.json(todos[i]);
-		  	return;
-		  }
-		}
+	var matchedTodo = _.findWhere(todos,{id:index});
+	if (matchedTodo){
+		res.json(matchedTodo);
+	}else{
+		res.status(404).send();
 	}
-	res.status(404).send();
-
 });
 
 // POST /todos/
-
 app.post('/todos',function(req,res){
+    var body = _.pick(req.body,'description','completed'); //just gets the fields we are interested in 
+
+	if(!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length === 0){
+		return res.status(400).send(); //400 bad data provided
+	}
+
 	
-	// var body = req.body;
-
-	// if(body.description && body.completed){ //make sure we have a description and completed field
-	// 	var todo = {
-	// 		id: todoNextId,
-	// 		description: body.description,
-	// 		completed: (body.completed == 'true')
-	// 	};
-	// 	todos.push(todo);
-	// 	todoNextId++;
-	// 	res.json({message:'added to the database'});
-	// }else{
-	// 	res.status(404).send()
-	// }
-
-	var body = req.body;
 	body.id = todoNextId++ //sets the body id to the current num then increments
+	body.description = body.description.trim();
+
 	todos.push(body);
 	res.send(body);	
-
 });
 
 
