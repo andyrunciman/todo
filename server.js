@@ -61,6 +61,22 @@ app.post('/todos',function(req,res){
 	res.send(body);	
 });
 
+//DELETE /todo/:id
+app.delete('/todos/:id',function(req,res){
+	var index = parseInt(req.params.id);
+	//var item = _.find(todos,function(body){return body.id === index});
+	var item = _.findWhere(todos,{id:index});
+	
+	if(item){
+		//var itemPos = _.indexOf(todos,item)
+		//todos.splice(itemPos,1);
+		todos = _.without(todos,item); //refactored
+		res.send(item);
+	}else{
+		return res.status(404).send();
+	}
+});
+
 
 app.listen(PORT,function(){
 	console.log('Express listening on Port' + PORT + '!');
