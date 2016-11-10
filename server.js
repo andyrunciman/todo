@@ -43,7 +43,7 @@ app.get('/todos',function(req,res){
 
 	if(queryParams.hasOwnProperty('q') && queryParams.q.length > 0){
 		filteredTodo = _.filter(filteredTodo,function(todo){
-			return todo.description.indexOf(queryParams.q) >= 0
+			return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) >= 0
 		});
 	}
 
@@ -129,5 +129,5 @@ app.put('/todos/:id',function(req,res){
 
 
 app.listen(PORT,function(){
-	console.log('Express listening on Port' + PORT + '!');
+	console.log('Express listening on Port ' + PORT + '!');
 });
