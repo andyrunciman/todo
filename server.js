@@ -1,6 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
+var db = require('./db.js');
 
 var app = express();
 var PORT = process.env.PORT || 3000; //Works for Horoko
@@ -10,39 +11,39 @@ app.use(bodyParser.json());
 
 //model + collection
 var todos = [{
-	id:1,
-	description:'pick up car',
-	completed:false
-},{
-	id:2,
-	description:'go to supermarket',
-	completed:false
-},{
-	id:3,
-	description:'make tea',
-	completed:true
+	id: 1,
+	description: 'pick up car',
+	completed: false
+}, {
+	id: 2,
+	description: 'go to supermarket',
+	completed: false
+}, {
+	id: 3,
+	description: 'make tea',
+	completed: true
 }];
 
 var todoNextId = 4;
 
-app.get('/',function(req,res){
+app.get('/', function (req, res) {
 	res.send('Todo API Root');
 });
 
 //GET /todos
-app.get('/todos',function(req,res){
+app.get('/todos', function (req, res) {
 	var queryParams = req.query;
 	var filteredTodo = todos;
 
-	if(queryParams.hasOwnProperty('completed') && queryParams.completed === "true"){
+	if (queryParams.hasOwnProperty('completed') && queryParams.completed === "true") {
 		//do this as the queryparam is string and needs to be boolean
-		filteredTodo = _.where(filteredTodo,{completed:true});
-	}else if(queryParams.hasOwnProperty('completed') && queryParams.completed === "false"){
-		filteredTodo = _.where(filteredTodo,{completed:false});
+		filteredTodo = _.where(filteredTodo, { completed: true });
+	} else if (queryParams.hasOwnProperty('completed') && queryParams.completed === "false") {
+		filteredTodo = _.where(filteredTodo, { completed: false });
 	}
 
-	if(queryParams.hasOwnProperty('q') && queryParams.q.length > 0){
-		filteredTodo = _.filter(filteredTodo,function(todo){
+	if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
+		filteredTodo = _.filter(filteredTodo, function (todo) {
 			return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) >= 0
 		});
 	}
@@ -51,83 +52,104 @@ app.get('/todos',function(req,res){
 });
 
 //GET /todo/:id
-app.get('/todos/:id',function(req,res){
+app.get('/todos/:id', function (req, res) {
 	var index = parseInt(req.params.id);
-	var matchedTodo = _.findWhere(todos,{id:index});
-	if (matchedTodo){
+	var matchedTodo = _.findWhere(todos, { id: index });
+	if (matchedTodo) {
 		res.json(matchedTodo);
-	}else{
+	} else {
 		res.status(404).send();
 	}
 });
 
 // POST /todos/
-app.post('/todos',function(req,res){
-    var body = _.pick(req.body,'description','completed'); //just gets the fields we are interested in 
+app.post('/todos', function (req, res) {
+	var body = _.pick(req.body, 'description', 'completed'); //just gets the fields we are interested in 
 
-	if(!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length === 0){
-		return res.status(400).send(); //400 bad data provided
+	if(!_.isString(body.description) || body.description.trim().length < 1 || (body.completed && !_.isBoolean(body.completed))){
+		return res.status('400').send("Invalid data");
 	}
 
-	
-	body.id = todoNextId++ //sets the body id to the current num then increments
-	body.description = body.description.trim();
+	console.log('about to add new todo!')
+	//use the value if it was set and is boolean otherwise default to false.
+	//var _completed = (body.completed && _.isBoolean(body.completed))?body.completed:false;
 
-	todos.push(body);
-	res.send(body);	
+	db.todo.create({
+		description: body.description,
+		completed: body.completed || false
+	}).then(function(todo){
+		res.json(todo.toJSON());
+	}).catch(function(err){
+		res.json(err);
+	});
+
+	// if (!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length === 0) {
+	// 	return res.status(400).send(); //400 bad data provided
+	// }
+
+	// body.id = todoNextId++ //sets the body id to the current num then increments
+	// body.description = body.description.trim();
+
+	// todos.push(body);
+	// res.send(body);
 });
 
 //DELETE /todo/:id
-app.delete('/todos/:id',function(req,res){
+app.delete('/todos/:id', function (req, res) {
 	var index = parseInt(req.params.id);
 	//var item = _.find(todos,function(body){return body.id === index});
-	var item = _.findWhere(todos,{id:index});
-	
-	if(item){
+	var item = _.findWhere(todos, { id: index });
+
+	if (item) {
 		//var itemPos = _.indexOf(todos,item)
 		//todos.splice(itemPos,1);
-		todos = _.without(todos,item); //refactored
+		todos = _.without(todos, item); //refactored
 		res.send(item);
-	}else{
+	} else {
 		return res.status(404).send();
 	}
 });
 
-app.put('/todos/:id',function(req,res){
+app.put('/todos/:id', function (req, res) {
 
-	var body = _.pick(req.body,'description','completed'); //just gets the fields we are interested in 
+	var body = _.pick(req.body, 'description', 'completed'); //just gets the fields we are interested in 
 	var validAttributes = {};
 	var index = parseInt(req.params.id);
-	var matchedTodo = _.findWhere(todos,{id:index});
+	var matchedTodo = _.findWhere(todos, { id: index });
 
-	if(!matchedTodo){
+	if (!matchedTodo) {
 		return res.status(404).send();
 		//404 not found
 	}
 
-	if(body.hasOwnProperty('completed') && _.isBoolean(body.completed)){
+	if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
 		validAttributes.completed = body.completed;
-	}else if(body.hasOwnProperty('completed')){
+	} else if (body.hasOwnProperty('completed')) {
 		return res.status(400).send();
 		//400 bad data
 	}
 	//seems to be open to SQL injection / Javascript injection
 
-	if(body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0){
+	if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
 		validAttributes.description = body.description;
-	}else if (body.hasOwnProperty('description')) {
+	} else if (body.hasOwnProperty('description')) {
 		return res.status(400).send();
 	}
-	
+
 	//this works as object passed by reference.
-	_.extend(matchedTodo,validAttributes);
+	_.extend(matchedTodo, validAttributes);
 
 	//automatically sends 200
 	res.json(matchedTodo);
 
 });
 
+console.log(db);
 
-app.listen(PORT,function(){
-	console.log('Express listening on Port ' + PORT + '!');
+db.sequelize.sync().then(function () {
+	app.listen(PORT, function () {
+		console.log('Express listening on Port ' + PORT + '!');
+	});
 });
+
+
