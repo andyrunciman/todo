@@ -68,52 +68,46 @@ app.post('/todos', function (req, res) {
 
 //DELETE /todo/:id
 app.delete('/todos/:id', function (req, res) {
-	// var index = parseInt(req.params.id);
-	// //var item = _.find(todos,function(body){return body.id === index});
-	// var item = _.findWhere(todos, { id: index });
-
-	// if (item) {
-	// 	//var itemPos = _.indexOf(todos,item)
-	// 	//todos.splice(itemPos,1);
-	// 	todos = _.without(todos, item); //refactored
-	// 	res.send(item);
-	// } else {
-	// 	return res.status(404).send();
-	// }
+	var index = parseInt(req.params.id);
+	db.todo.destroy({where:{id:index}}).then(function(rowsDeleted){
+		if(rowsDeleted===0){
+			res.status(404).send({error:'no todo with this id'})
+		}else{
+			res.status(204).send();
+		}	
+	},function(){
+		res.status(404).send({error:'no todo with this id'})
+	}).catch(function(err){
+		res.status(500).send(err);
+	});
 });
 
 app.put('/todos/:id', function (req, res) {
 
 	var body = _.pick(req.body, 'description', 'completed'); //just gets the fields we are interested in 
-	// var validAttributes = {};
-	// var index = parseInt(req.params.id);
-	// var matchedTodo = _.findWhere(todos, { id: index });
+	var index = parseInt(req.params.id);
+	var attributes = {};
 
-	// if (!matchedTodo) {
-	// 	return res.status(404).send();
-	// 	//404 not found
-	// }
+	if (body.hasOwnProperty('completed')){
+	 	attributes.completed = body.completed;
+	} 
 
-	// if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
-	// 	validAttributes.completed = body.completed;
-	// } else if (body.hasOwnProperty('completed')) {
-	// 	return res.status(400).send();
-	// 	//400 bad data
-	// }
-	// //seems to be open to SQL injection / Javascript injection
+	if (body.hasOwnProperty('description')) {
+		attributes.description = body.description;
+	}
 
-	// if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
-	// 	validAttributes.description = body.description;
-	// } else if (body.hasOwnProperty('description')) {
-	// 	return res.status(400).send();
-	// }
-
-	// //this works as object passed by reference.
-	// _.extend(matchedTodo, validAttributes);
-
-	// //automatically sends 200
-	// res.json(matchedTodo);
-
+	db.todo.update(attributes,{where:{id:index}}).then(function(affectedRows){
+		if(affectedRows[0]===0){
+			res.status(404).send({error:'No records were updated'});
+		}else{
+			res.status(204).send();
+		}
+	},function(){
+		res.status(404).send({error:'Update failed'});
+	}).catch(function(err){
+		res.status(500).send(err);
+	});
+	
 });
 
 console.log(db);
