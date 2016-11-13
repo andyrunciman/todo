@@ -54,7 +54,6 @@ app.post('/todos', function (req, res) {
 	if(!_.isString(body.description) || body.description.trim().length < 1 || (body.completed && !_.isBoolean(body.completed))){
 		return res.status('400').send("Invalid data");
 	}
-
 	db.todo.create({
 		description: body.description,
 		completed: body.completed || false
@@ -113,7 +112,7 @@ app.put('/todos/:id', function (req, res) {
 app.post('/users',function(req,res){
 	var body = _.pick(req.body,'email','password');
 	db.user.create(body).then(function(user){
-		res.json(user);
+		res.json(user.toPublicJSON());
 	},function(err){
 		res.status(400).send(err);
 	}).catch(function(err){
@@ -123,8 +122,40 @@ app.post('/users',function(req,res){
 	
 });
 
+app.post('/users/login',function(req,res){
+	var body = _.pick(req.body,'email','password');
+	if(typeof body.password != 'string' || typeof body.email != 'string' ){
+		return res.status('400').send();
+	}
+    db.user.findOne({
+        where: {
+            email: body.email
+        }
+    }).then(function(user) {
+        if (!user) {
+            return res.status(401).send();
+			//AUTHENTICATION FAIL
+        }
+		
+		if(user.validatePassword(body.password)){
+			return res.json(user.toJSON());
+		}else{
+			 return res.status(401).send();
+		}
+		
+		
+		
 
-db.sequelize.sync().then(function () {
+
+
+    }, function(e) {
+        return res.status(500).send();
+    });
+
+
+})
+
+db.sequelize.sync({force:true}).then(function () {
 	app.listen(PORT, function () {
 		console.log('Express listening on Port ' + PORT + '!');
 	});
