@@ -11,6 +11,8 @@
   "dependencies": {
     "bcrypt": "^0.8.7",
     "body-parser": "^1.15.2",
+    "crypto-js": "^3.1.8",
+    "cryptojs": "^2.5.3",
     "express": "^4.14.0",
     "pg": "^6.1.0",
     "pg-hstore": "^2.3.2",
